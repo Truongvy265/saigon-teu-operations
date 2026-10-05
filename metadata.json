@@ -1,0 +1,6 @@
+{
+  "name": "SGT Operations - Hệ Thống Quản Lý Show & Vận Hành Sự Kiện",
+  "description": "Hệ thống quản trị nội bộ vận hành sự kiện chuyên biệt: phân bổ task theo show, timeline dự án, theo dõi kẹt việc, chấm công theo show và vị trí, phân tích số liệu vé, dự trù kinh phí và hoàn tạm ứng.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
