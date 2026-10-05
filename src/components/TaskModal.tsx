@@ -16,7 +16,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   taskToEdit,
   defaultShowId
 }) => {
-  const { shows, addTask, updateTask } = useOps();
+  const { shows, addTask, updateTask, currentUser, addDeliverable } = useOps();
 
   const [title, setTitle] = useState('');
   const [showId, setShowId] = useState(defaultShowId || shows[0]?.id || '');
@@ -24,8 +24,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [category, setCategory] = useState<TaskCategory>('10. NHÂN SỰ');
   const [phase, setPhase] = useState<TaskPhase>('PHASE 2 (PLANNING)');
   const [department, setDepartment] = useState<TaskDepartment>('SHOW (SE)');
-  const [pic, setPic] = useState('Chi');
-  const [deadline, setDeadline] = useState('15/12/2026');
+  const [assigneeId, setAssigneeId] = useState('');
+  const [plannedDeadline, setPlannedDeadline] = useState('2026-12-15');
+  const [deadline, setDeadline] = useState('2026-12-15');
+  const [deliverableTitle,setDeliverableTitle]=useState('');
+  const [deliverableUrl,setDeliverableUrl]=useState('');
   const [priority, setPriority] = useState<'Thấp' | 'Bình thường' | 'Cao' | 'Khẩn cấp'>('Bình thường');
   const [status, setStatus] = useState<ShowTask['status']>('TODO');
   const [stuckReason, setStuckReason] = useState('');
@@ -39,8 +42,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setCategory(taskToEdit.category || (taskToEdit.isExternalTask ? 'TASK NGOÀI (AD-HOC)' : '10. NHÂN SỰ'));
       setPhase(taskToEdit.phase || 'PHASE 2 (PLANNING)');
       setDepartment(taskToEdit.department || 'SHOW (SE)');
-      setPic(taskToEdit.pic);
-      setDeadline(taskToEdit.deadline);
+      setAssigneeId(taskToEdit.assignees?.[0]?.userId||'');
+      setPlannedDeadline((taskToEdit.plannedDeadline||taskToEdit.deadline).slice(0,10));
+      setDeadline((taskToEdit.currentDeadline||taskToEdit.deadline).slice(0,10));
       setPriority(taskToEdit.priority);
       setStatus(taskToEdit.status);
       setStuckReason(taskToEdit.stuckReason || '');
@@ -52,8 +56,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setCategory(defaultShowId ? '10. NHÂN SỰ' : 'TASK NGOÀI (AD-HOC)');
       setPhase('PHASE 2 (PLANNING)');
       setDepartment('SHOW (SE)');
-      setPic('Chi');
-      setDeadline('15/12/2026');
+      setAssigneeId('');
+      setPlannedDeadline('2026-12-15');
+      setDeadline('2026-12-15');
       setPriority('Bình thường');
       setStatus('TODO');
       setStuckReason('');
@@ -74,8 +79,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       category: isExternal ? 'TASK NGOÀI (AD-HOC)' : category,
       phase,
       department,
-      pic: pic.trim(),
+      pic: '',
+      assignees: assigneeId ? [{taskId:taskToEdit?.id||'',userId:assigneeId,user:shows.find(s=>s.id===showId)?.members?.find(m=>m.userId===assigneeId)?.user!}] : [],
       deadline,
+      plannedDeadline,
+      currentDeadline: deadline,
       priority,
       status,
       stuckReason: status === 'STUCK' ? stuckReason : undefined,
@@ -198,14 +206,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Người Nhận Việc (PIC):
               </label>
-              <input
-                type="text"
-                required
-                value={pic}
-                onChange={e => setPic(e.target.value)}
-                placeholder="VD: Chi, Vỹ, Yến Nhi..."
+              <select
+                value={assigneeId}
+                onChange={e => setAssigneeId(e.target.value)}
                 className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
-              />
+              ><option value="">🔴 Chưa phân công</option>{shows.find(s=>s.id===showId)?.members?.map(m=><option key={m.id} value={m.userId}>{m.user.name} · {m.role}</option>)}</select>
             </div>
 
             <div>
@@ -213,7 +218,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 Hạn Chót (Deadline):
               </label>
               <input
-                type="text"
+                type="date"
                 required
                 value={deadline}
                 onChange={e => setDeadline(e.target.value)}
@@ -221,6 +226,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block font-semibold mb-1">Planned Deadline</label><input type="date" value={plannedDeadline} disabled={!!taskToEdit||currentUser?.companyRole!=='MANAGER'} onChange={e=>setPlannedDeadline(e.target.value)} className="w-full p-2.5 rounded-xl border bg-white dark:bg-slate-800 disabled:opacity-60" /></div>
+            <div><label className="block font-semibold mb-1">Current Deadline</label><input type="date" value={deadline} disabled={currentUser?.companyRole!=='MANAGER'} onChange={e=>setDeadline(e.target.value)} className="w-full p-2.5 rounded-xl border bg-white dark:bg-slate-800 disabled:opacity-60" /></div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -286,6 +296,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
             />
           </div>
+          {taskToEdit&&<div className="space-y-2 border-t pt-3"><b>KẾT QUẢ / FILE BÀN GIAO</b>{taskToEdit.deliverables?.map(d=><a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="block text-cyan-600 underline">{d.title||d.url}</a>)}<div className="grid grid-cols-3 gap-2"><input value={deliverableTitle} onChange={e=>setDeliverableTitle(e.target.value)} placeholder="Tên file / mô tả" className="p-2 rounded border"/><input value={deliverableUrl} onChange={e=>setDeliverableUrl(e.target.value)} placeholder="https://..." className="p-2 rounded border"/><button type="button" onClick={async()=>{await addDeliverable(taskToEdit.id,deliverableTitle,deliverableUrl);setDeliverableTitle('');setDeliverableUrl('')}} className="bg-cyan-600 text-white rounded font-bold">+ Thêm link</button></div></div>}
 
           <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button

@@ -12,6 +12,7 @@ import { AdvanceSettlement } from './components/AdvanceSettlement';
 import { PersonnelBarem } from './components/PersonnelBarem';
 import { TaskModal } from './components/TaskModal';
 import { ShowModal } from './components/ShowModal';
+import { MyTasks } from './components/MyTasks';
 import { ShowTask, ShowInfo } from './types';
 
 const MainContent: React.FC = () => {
@@ -103,6 +104,7 @@ const MainContent: React.FC = () => {
             onOpenTaskDetail={handleOpenTaskDetail}
           />
         )}
+        {activeTab === 'my-tasks' && <MyTasks onOpen={handleOpenTaskDetail} />}
 
         {activeTab === 'attendance' && (
           <ShowAttendance

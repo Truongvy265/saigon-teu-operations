@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useOps } from '../context/OpsContext';
 import { ShowTask, TaskCategory, TaskStatus } from '../types';
+import { ShowOperationsPanel } from './ShowOperationsPanel';
 
 const CATEGORIES: TaskCategory[] = [
   '1. VENUE',
@@ -65,6 +66,7 @@ export const ProjectPlanTimeline: React.FC<ProjectPlanTimelineProps> = ({
 
   return (
     <div className="space-y-6">
+      <ShowOperationsPanel show={currentShow} tasks={showTasks} onAssign={onOpenTaskDetail} />
       {/* Top Controller */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

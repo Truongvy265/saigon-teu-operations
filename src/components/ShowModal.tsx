@@ -18,7 +18,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
 
   const [name, setName] = useState('');
   const [month, setMonth] = useState('Tháng 12/2026');
-  const [date, setDate] = useState('19/12/2026');
+  const [date, setDate] = useState('2026-12-19');
   const [time, setTime] = useState('19:30 - 22:00');
   const [city, setCity] = useState('HÀ NỘI');
   const [venue, setVenue] = useState('Nhà hát Tuổi Trẻ / Trung Tâm Văn Hóa');
@@ -34,7 +34,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
     if (showToEdit) {
       setName(showToEdit.name);
       setMonth(showToEdit.month);
-      setDate(showToEdit.date);
+      setDate((showToEdit.showDate||showToEdit.date).slice(0,10));
       setTime(showToEdit.time);
       setCity(showToEdit.locationCity);
       setVenue(showToEdit.venue);
@@ -48,7 +48,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
     } else {
       setName('');
       setMonth('Tháng 12/2026');
-      setDate('19/12/2026');
+      setDate('2026-12-19');
       setTime('19:30 - 22:00');
       setCity('HÀ NỘI');
       setVenue('Nhà hát Tuổi Trẻ');
@@ -73,11 +73,13 @@ export const ShowModal: React.FC<ShowModalProps> = ({
       name: name.trim(),
       month,
       date,
+      showDate: date,
       time,
       locationCity: city,
       venue,
       scale,
       status,
+      apiStatus: status==='COMPLETED'?'COMPLETED':status==='CANCELLED'?'CANCELLED':status==='IN_PROGRESS'?'READY':'PLANNING',
       leadShow,
       seOnsite,
       targetTickets: Number(targetTickets),
@@ -142,7 +144,7 @@ export const ShowModal: React.FC<ShowModalProps> = ({
                 Tháng Diễn Ra:
               </label>
               <input
-                type="text"
+                type="date"
                 value={month}
                 onChange={e => setMonth(e.target.value)}
                 placeholder="VD: Tháng 12/2026"

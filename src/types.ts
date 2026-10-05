@@ -6,6 +6,16 @@ export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'STUCK' | 'DONE';
 
 export type TaskPriority = 'Khẩn cấp' | 'Quan trọng' | 'Bình thường';
 
+export type ApiTaskPriority = 'NORMAL' | 'IMPORTANT' | 'URGENT';
+export type CompanyRole = 'MANAGER' | 'MEMBER';
+export type ShowStatus = 'PLANNING' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
+export type ShowMemberRole = 'PM' | 'PA1' | 'PA2' | 'PA3' | 'SE' | 'SSE' | 'PE' | 'SAE' | 'PRODUCTION' | 'SOCIAL' | 'TALENT_ASSISTANT' | 'OTHER';
+export interface User { id:string; name:string; email:string; avatarUrl?:string|null; department?:string|null; companyRole:CompanyRole; active:boolean }
+export interface ShowMember { id:string; showId:string; userId:string; role:ShowMemberRole; note?:string|null; user:User }
+export interface TaskAssignee { taskId:string; userId:string; user:User }
+export interface TaskDeliverable { id:string; taskId:string; title?:string|null; url:string; submittedById:string; createdAt:string; submittedBy?:User }
+export interface TaskDependency { id:string; predecessorTaskId:string; successorTaskId:string; lagDays:number; autoAdjust:boolean }
+
 export type TaskCategory = 
   | '1. VENUE'
   | '2. LINEUP VÀ KỊCH BẢN CHỮ'
@@ -38,21 +48,30 @@ export interface ShowTask {
   id: string;
   showId?: string; // empty if external/ad-hoc task
   showName?: string;
+  show?: { id:string; name:string; members?: ShowMember[] };
   title: string;
   category: TaskCategory;
   phase?: TaskPhase;
   department?: TaskDepartment;
   subCategory?: string;
-  pic: string; // Person In Charge
+  pic: string; // compatibility display only; assignees is the source of truth
+  assignees?: TaskAssignee[];
+  deliverables?: TaskDeliverable[];
+  predecessors?: TaskDependency[];
+  successors?: TaskDependency[];
+  description?: string;
   secondaryPic?: string;
   startDate?: string;
   deadline: string;
+  plannedDeadline?: string;
+  currentDeadline?: string;
   priority: TaskPriority;
   status: TaskStatus;
   progressPercent?: number;
   stuckReason?: string; // Reason when status is 'STUCK' or bottlenecked
   notes?: string;
   isExternalTask?: boolean; // Task ngoài
+  completedAt?: string | null;
 }
 
 export interface ShowInfo {
@@ -60,12 +79,18 @@ export interface ShowInfo {
   name: string;
   month?: string;
   date: string; // e.g. "T7 (19/12)"
+  showDate?: string;
   time?: string;
   locationCity: 'SÀI GÒN' | 'HÀ NỘI' | 'CẦN THƠ' | 'BIÊN HOÀ' | 'THỦ ĐỨC' | 'ĐỒNG NAI' | 'KHÁC' | string;
   venue: string;
   scale: ShowScale;
   goal?: ShowGoal;
   status?: 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  apiStatus?: ShowStatus;
+  code?: string | null;
+  description?: string | null;
+  members?: ShowMember[];
+  progressPercent?: number;
   leadShow?: string;
   seOnsite?: string;
   shifts?: string[]; // e.g. ["Suất 1: 17:00 - 19:00", "Suất 2: 20:00 - 22:00"]

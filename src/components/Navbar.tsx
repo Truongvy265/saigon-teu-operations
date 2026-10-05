@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewShowModal,
   onOpenNewTaskModal
 }) => {
-  const { roleMode, setRoleMode, tasks, resetToDefaultData } = useOps();
+  const { roleMode, setRoleMode, tasks, resetToDefaultData, users, currentUser, setCurrentUser } = useOps();
 
   const stuckTasks = tasks.filter(t => t.status === 'STUCK');
   const overdueTasks = tasks.filter(t => {
@@ -42,6 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'radar', label: 'Điều Hành & Cảnh Báo', icon: ShieldAlert, highlight: stuckTasks.length > 0 },
     { id: 'shows', label: '[SGT] Show Các Tháng', icon: Calendar },
     { id: 'project-plan', label: 'Project Plan & Timeline', icon: KanbanSquare },
+    { id: 'my-tasks', label: 'Công việc của tôi', icon: CheckSquare },
     { id: 'ad-hoc', label: 'Task Ngoài (Giao Việc)', icon: CheckSquare },
     { id: 'attendance', label: 'Chấm Công Theo Show', icon: Clock },
     { id: 'analytics', label: 'Phân Tích Số Liệu 2026', icon: BarChart3 },
@@ -57,6 +58,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo & Tagline */}
           <div className="flex items-center space-x-3">
+            <select value={currentUser?.id||''} onChange={e=>void setCurrentUser(e.target.value)} title="Development user switcher - không phải production authentication" className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs">
+              {users.map(u=><option key={u.id} value={u.id}>{u.name} · {u.companyRole}</option>)}
+            </select>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center font-black text-white text-lg tracking-wider shadow-inner">
               SGT
             </div>
