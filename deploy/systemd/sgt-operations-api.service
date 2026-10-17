@@ -1,0 +1,24 @@
+[Unit]
+Description=Saigon Teu Operations API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=sgt-ops
+Group=sgt-ops
+WorkingDirectory=/opt/saigon-teu-operations/current
+EnvironmentFile=/etc/saigon-teu-operations/api.env
+ExecStart=/usr/bin/node /opt/saigon-teu-operations/current/dist-server/index.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

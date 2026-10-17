@@ -1,83 +1,54 @@
 # Saigon Tếu Operations
 
-MVP nội bộ quản lý Show, nhân sự theo Show, Task, người đảm nhận và file bàn giao. Giao diện React hiện hữu được giữ lại; dữ liệu core được lưu trong PostgreSQL thay vì localStorage.
+Ứng dụng nội bộ quản lý Show, nhân sự theo Show, Task, người đảm nhận và file bàn giao.
 
-## Architecture
+## Kiến trúc
 
-- Frontend: React 19, Vite, TypeScript, Tailwind CSS, Context và API service.
-- Backend: Node.js, Express, Prisma ORM.
-- Database: PostgreSQL (khuyến nghị Neon).
-- Core persistence: `User`, `Show`, `ShowMember`, `Task`, `TaskAssignee`, `TaskDeliverable`, `TaskDependency`.
-- Analytics, finance, advances và attendance vẫn dùng mock/localStorage trong phase này.
+- Frontend: React 19, Vite, TypeScript, Tailwind CSS.
+- Backend: Node.js 20, Express, Prisma ORM.
+- Database: PostgreSQL/Neon.
+- Production: Cloudflare Pages + Oracle Cloud ARM64 VM + Cloudflare Tunnel.
 
-## Requirements
+Các module core (`User`, `Show`, `ShowMember`, `Task`, assignee, deliverable, dependency và activity) lưu trong PostgreSQL. Finance, advances, attendance và một phần analytics hiện vẫn là mock/localStorage.
 
-- Node.js 20+
-- PostgreSQL 15+ hoặc Neon PostgreSQL
-- npm
+## Phát triển local
 
-## Environment variables
+Yêu cầu Node.js 20.19–22.x và PostgreSQL. Sao chép `.env.example` thành `.env`, điền database development, rồi chạy:
 
-Sao chép `.env.example` thành `.env`:
-
-```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
-API_PORT="4000"
-VITE_API_URL="http://localhost:4000/api"
+```powershell
+npm.cmd install
+npm.cmd run prisma:generate
+npm.cmd run prisma:migrate -- --name init
+npm.cmd run prisma:seed
 ```
 
-Không commit `.env` hoặc credential thật.
+Hai terminal:
 
-## Database setup
-
-```bash
-npm install
-npm run prisma:generate
-npm run prisma:migrate -- --name init
-npm run prisma:seed
+```powershell
+npm.cmd run dev:api
+npm.cmd run dev:web
 ```
 
-Seed tạo 7 user, Show “Tếu Lên Trình #4”, staffing, 10 Task (3 Done, 3 In Progress, 3 Todo, 1 Stuck), 4 unassigned, 2 deliverable và 2 dependency.
+Trên Windows PowerShell bị chặn `npm.ps1`, dùng `npm.cmd` như trên hoặc thay execution policy cho tài khoản của bạn. Không cần đổi policy toàn máy.
 
-## Run
+Development mặc định dùng user switcher và `x-user-id`. Production bắt buộc Firebase/Google Login và vô hiệu hóa hoàn toàn cơ chế này.
 
-Terminal 1:
+## Kiểm tra
 
-```bash
-npm run dev:api
+```powershell
+npm.cmd run lint
+npm.cmd test
+npm.cmd run build
+npm.cmd run prisma:validate
 ```
 
-Terminal 2:
+## Production
 
-```bash
-npm run dev
-```
+Xem [Production deployment runbook](docs/PRODUCTION_DEPLOYMENT.md) và các mẫu trong `deploy/`. Không commit `.env`, service-account JSON, database URL hoặc tunnel credential.
 
-Frontend chạy tại `http://localhost:3000`, API mặc định tại `http://localhost:4000/api`.
+## Giới hạn đã biết
 
-## Validation
-
-```bash
-npm run lint
-npm run build
-npm test
-npm run prisma:validate
-```
-
-## Development authentication
-
-Navbar có development user switcher. Frontend gửi `x-user-id`; backend vẫn kiểm tra quyền Manager/Member và membership/assignment. Đây **không phải production authentication**. TODO phase sau: thay bằng Firebase Authentication hoặc Google Login và tắt hoàn toàn dev header trong production.
-
-## Production notes
-
-- Dùng HTTPS và secret manager cho `DATABASE_URL`.
-- Chạy Prisma migration trong deployment pipeline.
-- Chỉ expose API sau reverse proxy, cấu hình CORS theo origin cụ thể.
-- Thay development identity bridge trước khi đưa ra production.
-
-## Known limitations
-
-- Dependency mới hỗ trợ mô hình finish-to-start trực tiếp một cấp; chưa có critical path/recursive scheduling.
-- Không tích hợp Google Drive/Canva/Figma API; deliverable chỉ lưu URL HTTPS.
-- Các module finance, attendance và analytics chưa migrate sang PostgreSQL.
+- Dependency mới chỉ hỗ trợ finish-to-start trực tiếp một cấp; chưa có critical path/recursive scheduling.
+- Không tích hợp Google Drive/Canva/Figma API; deliverable chỉ lưu HTTPS URL.
+- Finance, attendance và analytics chưa được migrate hoàn toàn sang PostgreSQL.
 - Chưa có notification/email/full workflow template.

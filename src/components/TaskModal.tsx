@@ -1,317 +1,439 @@
-import React, { useState, useEffect } from 'react';
-import { X, CheckSquare, AlertTriangle, Calendar, User, Flag, Layers } from 'lucide-react';
-import { useOps } from '../context/OpsContext';
-import { ShowTask, TaskPhase, TaskDepartment, TaskCategory } from '../types';
-
-interface TaskModalProps {
+import React, { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CheckSquare, Clock3, X } from "lucide-react";
+import { useOps } from "../context/OpsContext";
+import { taskApi } from "../services/api";
+import type {
+  ShowTask,
+  TaskActivity,
+  TaskCategory,
+  TaskDepartment,
+  TaskPhase,
+} from "../types";
+const activityLabels: Record<string, string> = {
+  TASK_CREATED: "Tạo công việc",
+  TASK_ASSIGNED: "Phân công công việc",
+  TASK_UNASSIGNED: "Gỡ người đảm nhận",
+  STATUS_CHANGED: "Thay đổi trạng thái",
+  DEADLINE_CHANGED: "Thay đổi deadline",
+  DELIVERABLE_ADDED: "Thêm file bàn giao",
+  DELIVERABLE_REMOVED: "Xóa file bàn giao",
+  STUCK_REPORTED: "Báo bị kẹt",
+  STUCK_RESOLVED: "Đã xử lý vấn đề",
+};
+const vnTime = (v: string) =>
+  new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(v));
+export const TaskModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   taskToEdit?: ShowTask | null;
   defaultShowId?: string;
-}
-
-export const TaskModal: React.FC<TaskModalProps> = ({
-  isOpen,
-  onClose,
-  taskToEdit,
-  defaultShowId
-}) => {
-  const { shows, addTask, updateTask, currentUser, addDeliverable } = useOps();
-
-  const [title, setTitle] = useState('');
-  const [showId, setShowId] = useState(defaultShowId || shows[0]?.id || '');
-  const [isExternal, setIsExternal] = useState(false);
-  const [category, setCategory] = useState<TaskCategory>('10. NHÂN SỰ');
-  const [phase, setPhase] = useState<TaskPhase>('PHASE 2 (PLANNING)');
-  const [department, setDepartment] = useState<TaskDepartment>('SHOW (SE)');
-  const [assigneeId, setAssigneeId] = useState('');
-  const [plannedDeadline, setPlannedDeadline] = useState('2026-12-15');
-  const [deadline, setDeadline] = useState('2026-12-15');
-  const [deliverableTitle,setDeliverableTitle]=useState('');
-  const [deliverableUrl,setDeliverableUrl]=useState('');
-  const [priority, setPriority] = useState<'Thấp' | 'Bình thường' | 'Cao' | 'Khẩn cấp'>('Bình thường');
-  const [status, setStatus] = useState<ShowTask['status']>('TODO');
-  const [stuckReason, setStuckReason] = useState('');
-  const [notes, setNotes] = useState('');
-
+}> = ({ isOpen, onClose, taskToEdit, defaultShowId }) => {
+  const {
+    shows,
+    users,
+    addTask,
+    updateTask,
+    currentUser,
+    addDeliverable,
+    deleteTask,
+  } = useOps();
+  const [title, setTitle] = useState(""),
+    [showId, setShowId] = useState(""),
+    [isExternal, setExternal] = useState(false),
+    [category, setCategory] = useState<TaskCategory>("10. NHÂN SỰ"),
+    [phase, setPhase] = useState<TaskPhase>("PHASE 2 (PLANNING)"),
+    [department, setDepartment] = useState<TaskDepartment>("SHOW (SE)"),
+    [assigneeId, setAssigneeId] = useState(""),
+    [planned, setPlanned] = useState("2026-12-15"),
+    [deadline, setDeadline] = useState("2026-12-15"),
+    [reason, setReason] = useState(""),
+    [priority, setPriority] = useState<ShowTask["priority"]>("Bình thường"),
+    [status, setStatus] = useState<ShowTask["status"]>("TODO"),
+    [stuckReason, setStuckReason] = useState(""),
+    [notes, setNotes] = useState(""),
+    [fileTitle, setFileTitle] = useState(""),
+    [fileUrl, setFileUrl] = useState(""),
+    [activities, setActivities] = useState<TaskActivity[]>([]),
+    [error, setError] = useState(""),
+    [saving, setSaving] = useState(false);
+  const oldDeadline = (
+      taskToEdit?.currentDeadline ||
+      taskToEdit?.deadline ||
+      ""
+    ).slice(0, 10),
+    deadlineChanged = !!taskToEdit && deadline !== oldDeadline;
   useEffect(() => {
+    if (!isOpen) return;
+    setError("");
     if (taskToEdit) {
       setTitle(taskToEdit.title);
-      setShowId(taskToEdit.showId || '');
-      setIsExternal(!!taskToEdit.isExternalTask);
-      setCategory(taskToEdit.category || (taskToEdit.isExternalTask ? 'TASK NGOÀI (AD-HOC)' : '10. NHÂN SỰ'));
-      setPhase(taskToEdit.phase || 'PHASE 2 (PLANNING)');
-      setDepartment(taskToEdit.department || 'SHOW (SE)');
-      setAssigneeId(taskToEdit.assignees?.[0]?.userId||'');
-      setPlannedDeadline((taskToEdit.plannedDeadline||taskToEdit.deadline).slice(0,10));
-      setDeadline((taskToEdit.currentDeadline||taskToEdit.deadline).slice(0,10));
+      setShowId(taskToEdit.showId || "");
+      setExternal(!taskToEdit.showId);
+      setCategory(taskToEdit.category);
+      setPhase(taskToEdit.phase || "PHASE 2 (PLANNING)");
+      setDepartment(taskToEdit.department || "SHOW (SE)");
+      setAssigneeId(taskToEdit.assignees?.[0]?.userId || "");
+      setPlanned(
+        (taskToEdit.plannedDeadline || taskToEdit.deadline).slice(0, 10),
+      );
+      setDeadline(oldDeadline);
       setPriority(taskToEdit.priority);
       setStatus(taskToEdit.status);
-      setStuckReason(taskToEdit.stuckReason || '');
-      setNotes(taskToEdit.notes || '');
+      setStuckReason(taskToEdit.stuckReason || "");
+      setNotes(taskToEdit.notes || "");
+      void taskApi
+        .activities(taskToEdit.id)
+        .then(setActivities)
+        .catch((e) => setError(e.message));
     } else {
-      setTitle('');
-      setShowId(defaultShowId || shows[0]?.id || '');
-      setIsExternal(!defaultShowId);
-      setCategory(defaultShowId ? '10. NHÂN SỰ' : 'TASK NGOÀI (AD-HOC)');
-      setPhase('PHASE 2 (PLANNING)');
-      setDepartment('SHOW (SE)');
-      setAssigneeId('');
-      setPlannedDeadline('2026-12-15');
-      setDeadline('2026-12-15');
-      setPriority('Bình thường');
-      setStatus('TODO');
-      setStuckReason('');
-      setNotes('');
+      const external = !defaultShowId;
+      setTitle("");
+      setExternal(external);
+      setShowId(defaultShowId || shows[0]?.id || "");
+      setCategory(external ? "TASK NGOÀI (AD-HOC)" : "10. NHÂN SỰ");
+      setAssigneeId("");
+      setStatus("TODO");
+      setNotes("");
+      setActivities([]);
     }
-  }, [taskToEdit, defaultShowId, isOpen]);
-
+  }, [isOpen, taskToEdit, defaultShowId, shows]);
+  const assigneeOptions = useMemo(
+    () =>
+      isExternal
+        ? users.filter((u) => u.active)
+        : shows.find((s) => s.id === showId)?.members?.map((m) => m.user) || [],
+    [isExternal, users, shows, showId],
+  );
+  const selectedUser = assigneeOptions.find((u) => u.id === assigneeId);
   if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-
-    const taskData: ShowTask = {
-      id: taskToEdit ? taskToEdit.id : `task-${Date.now()}`,
-      showId: isExternal ? '' : showId,
+    if (deadlineChanged && !reason.trim()) {
+      setError("Vui lòng nhập lý do thay đổi deadline");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const data: ShowTask = {
+      id: taskToEdit?.id || "",
+      showId: isExternal ? undefined : showId,
       title: title.trim(),
-      category: isExternal ? 'TASK NGOÀI (AD-HOC)' : category,
+      category: isExternal ? "TASK NGOÀI (AD-HOC)" : category,
       phase,
       department,
-      pic: '',
-      assignees: assigneeId ? [{taskId:taskToEdit?.id||'',userId:assigneeId,user:shows.find(s=>s.id===showId)?.members?.find(m=>m.userId===assigneeId)?.user!}] : [],
+      pic: selectedUser?.name || "",
+      assignees:
+        assigneeId && selectedUser
+          ? [
+              {
+                taskId: taskToEdit?.id || "",
+                userId: assigneeId,
+                user: selectedUser,
+              },
+            ]
+          : [],
       deadline,
-      plannedDeadline,
       currentDeadline: deadline,
+      plannedDeadline: planned,
+      deadlineChangeReason: reason,
       priority,
       status,
-      stuckReason: status === 'STUCK' ? stuckReason : undefined,
+      stuckReason: status === "STUCK" ? stuckReason : undefined,
       notes: notes.trim(),
-      isExternalTask: isExternal
+      isExternalTask: isExternal,
     };
-
-    if (taskToEdit) {
-      updateTask(taskData);
-    } else {
-      addTask(taskData);
+    try {
+      taskToEdit ? await updateTask(data) : await addTask(data);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể lưu task");
+    } finally {
+      setSaving(false);
     }
-
-    onClose();
   };
-
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="flex items-center space-x-2">
-            <CheckSquare className="w-5 h-5 text-amber-500" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              {taskToEdit ? 'Chỉnh Sửa Chi Tiết Task' : 'Tạo Task Mới'}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
-          >
-            <X className="w-5 h-5" />
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-2xl w-full max-h-[92vh] overflow-y-auto space-y-4">
+        <div className="flex justify-between border-b pb-3">
+          <h3 className="font-black flex gap-2">
+            <CheckSquare size={20} />
+            {taskToEdit ? "Chi tiết công việc" : "Tạo công việc mới"}
+          </h3>
+          <button onClick={onClose}>
+            <X />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+        {error && (
+          <div className="p-3 bg-rose-50 text-rose-700 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        <form onSubmit={submit} className="space-y-4 text-sm">
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Tên Task / Nội dung công việc:
-            </label>
+            <label className="font-bold">Tên công việc</label>
             <input
-              type="text"
               required
               value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="VD: Chốt kịch bản tổng duyệt, Mua vật dụng đón khách..."
-              className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-amber-500 outline-none"
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full p-2.5 rounded-xl border bg-transparent"
             />
           </div>
-
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-850 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-            <input
-              type="checkbox"
-              id="isExternalCheck"
-              checked={isExternal}
-              onChange={e => setIsExternal(e.target.checked)}
-              className="rounded text-amber-500 focus:ring-amber-500 h-4 w-4"
-            />
-            <label htmlFor="isExternalCheck" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-              Đây là Task Ngoài / Công việc vận hành độc lập (Không gắn riêng 1 show)
+          {!taskToEdit && (
+            <label className="flex gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+              <input
+                type="checkbox"
+                checked={isExternal}
+                onChange={(e) => {
+                  setExternal(e.target.checked);
+                  setAssigneeId("");
+                }}
+              />
+              Công việc nội bộ, không thuộc Show
             </label>
-          </div>
-
+          )}
           {!isExternal && (
+            <select
+              value={showId}
+              onChange={(e) => {
+                setShowId(e.target.value);
+                setAssigneeId("");
+              }}
+              className="w-full p-2.5 rounded-xl border bg-transparent"
+            >
+              {shows.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Gắn Vào Show:
-              </label>
+              <label className="font-bold">Người đảm nhận</label>
               <select
-                value={showId}
-                onChange={e => setShowId(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
+                value={assigneeId}
+                disabled={currentUser?.companyRole !== "MANAGER"}
+                onChange={(e) => setAssigneeId(e.target.value)}
+                className="w-full p-2.5 rounded-xl border bg-transparent"
               >
-                {shows.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.date} - {s.locationCity})
+                <option value="">Chưa phân công</option>
+                {assigneeOptions.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
                   </option>
                 ))}
               </select>
             </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Phase Vận Hành:
-              </label>
-              <select
-                value={phase}
-                onChange={e => setPhase(e.target.value as TaskPhase)}
-                className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
-              >
-                <option value="PHASE 1 (INITIATING)">Phase 1 (Initiating)</option>
-                <option value="PHASE 2 (PLANNING)">Phase 2 (Planning)</option>
-                <option value="PHASE 3 (EXECUTING)">Phase 3 (Executing)</option>
-                <option value="PHASE 4 (SUPERVISOR / ONSITE)">Phase 4 (Onsite)</option>
-                <option value="PHASE 5 (CLOSING)">Phase 5 (Closing)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Bộ Phận (Team):
-              </label>
-              <select
+              <label className="font-bold">Bộ phận</label>
+              <input
                 value={department}
-                onChange={e => setDepartment(e.target.value as TaskDepartment)}
-                className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
-              >
-                <option value="SHOW (SE)">Show Ops (SE)</option>
-                <option value="TRUYỀN THÔNG (PE)">Truyền thông (PE)</option>
-                <option value="SALE (SAE)">Sale Vé (SAE)</option>
-                <option value="COMMUNITY & LOGISTIC (CE)">Community & Logistic (CE)</option>
-                <option value="KHÁC">Khác</option>
-              </select>
+                onChange={(e) =>
+                  setDepartment(e.target.value as TaskDepartment)
+                }
+                className="w-full p-2.5 rounded-xl border bg-transparent"
+              />
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Người Nhận Việc (PIC):
-              </label>
-              <select
-                value={assigneeId}
-                onChange={e => setAssigneeId(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
-              ><option value="">🔴 Chưa phân công</option>{shows.find(s=>s.id===showId)?.members?.map(m=><option key={m.id} value={m.userId}>{m.user.name} · {m.role}</option>)}</select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Hạn Chót (Deadline):
-              </label>
+              <label className="font-bold">Planned Deadline</label>
               <input
                 type="date"
-                required
+                value={planned}
+                disabled={!!taskToEdit}
+                onChange={(e) => setPlanned(e.target.value)}
+                className="w-full p-2.5 rounded-xl border bg-transparent disabled:opacity-60"
+              />
+            </div>
+            <div>
+              <label className="font-bold">Current Deadline</label>
+              <input
+                type="date"
                 value={deadline}
-                onChange={e => setDeadline(e.target.value)}
-                placeholder="VD: 15/12/2026"
-                className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
+                disabled={currentUser?.companyRole !== "MANAGER"}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="w-full p-2.5 rounded-xl border bg-transparent disabled:opacity-60"
               />
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block font-semibold mb-1">Planned Deadline</label><input type="date" value={plannedDeadline} disabled={!!taskToEdit||currentUser?.companyRole!=='MANAGER'} onChange={e=>setPlannedDeadline(e.target.value)} className="w-full p-2.5 rounded-xl border bg-white dark:bg-slate-800 disabled:opacity-60" /></div>
-            <div><label className="block font-semibold mb-1">Current Deadline</label><input type="date" value={deadline} disabled={currentUser?.companyRole!=='MANAGER'} onChange={e=>setDeadline(e.target.value)} className="w-full p-2.5 rounded-xl border bg-white dark:bg-slate-800 disabled:opacity-60" /></div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          {deadlineChanged && (
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Mức Độ Ưu Tiên:
-              </label>
-              <select
-                value={priority}
-                onChange={e => setPriority(e.target.value as any)}
-                className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
-              >
-                <option value="Thấp">Thấp</option>
-                <option value="Bình thường">Bình thường</option>
-                <option value="Cao">Cao</option>
-                <option value="Khẩn cấp">Khẩn cấp</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Trạng Thái Hiện Tại:
-              </label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value as any)}
-                className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold outline-none"
-              >
-                <option value="TODO">Chưa Bắt Đầu (TODO)</option>
-                <option value="IN_PROGRESS">Đang Thực Hiện (IN PROGRESS)</option>
-                <option value="STUCK">Đang Bị Kẹt / Vướng (STUCK)</option>
-                <option value="DONE">Đã Hoàn Thành (DONE)</option>
-              </select>
-            </div>
-          </div>
-
-          {status === 'STUCK' && (
-            <div className="bg-rose-50 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-300 dark:border-rose-800 space-y-1">
-              <label className="block font-bold text-rose-700 dark:text-rose-300 flex items-center space-x-1">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Lý Do Bị Kẹt / Điểm Nghẽn (Cần BQL hỗ trợ):</span>
+              <label className="font-bold text-amber-700">
+                Lý do thay đổi deadline *
               </label>
               <textarea
-                rows={2}
                 required
-                value={stuckReason}
-                onChange={e => setStuckReason(e.target.value)}
-                placeholder="Ghi rõ vướng mắc: Chờ bên rạp xác nhận, thiếu báo giá, chờ duyệt chi phí..."
-                className="w-full p-2 rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none text-xs"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Ví dụ: Lineup chốt trễ"
+                className="w-full p-2.5 rounded-xl border border-amber-400 bg-transparent"
               />
             </div>
           )}
-
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Ghi Chú Chi Tiết & Link Tài Liệu:
-            </label>
-            <textarea
-              rows={2}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="VD: Link drive kịch bản, quy chuẩn thiết kế..."
-              className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none"
-            />
+          <div className="grid md:grid-cols-2 gap-3">
+            <select
+              value={priority}
+              onChange={(e) =>
+                setPriority(e.target.value as ShowTask["priority"])
+              }
+              className="p-2.5 rounded-xl border bg-transparent"
+            >
+              <option>Bình thường</option>
+              <option>Quan trọng</option>
+              <option>Khẩn cấp</option>
+            </select>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ShowTask["status"])}
+              className="p-2.5 rounded-xl border bg-transparent"
+            >
+              <option value="TODO">Chưa bắt đầu</option>
+              <option value="IN_PROGRESS">Đang thực hiện</option>
+              <option value="STUCK">Bị kẹt</option>
+              <option value="DONE">Đã hoàn thành</option>
+            </select>
           </div>
-          {taskToEdit&&<div className="space-y-2 border-t pt-3"><b>KẾT QUẢ / FILE BÀN GIAO</b>{taskToEdit.deliverables?.map(d=><a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="block text-cyan-600 underline">{d.title||d.url}</a>)}<div className="grid grid-cols-3 gap-2"><input value={deliverableTitle} onChange={e=>setDeliverableTitle(e.target.value)} placeholder="Tên file / mô tả" className="p-2 rounded border"/><input value={deliverableUrl} onChange={e=>setDeliverableUrl(e.target.value)} placeholder="https://..." className="p-2 rounded border"/><button type="button" onClick={async()=>{await addDeliverable(taskToEdit.id,deliverableTitle,deliverableUrl);setDeliverableTitle('');setDeliverableUrl('')}} className="bg-cyan-600 text-white rounded font-bold">+ Thêm link</button></div></div>}
-
-          <div className="flex justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-xl shadow-md transition"
-            >
-              {taskToEdit ? 'Lưu Cập Nhật' : 'Tạo & Giao Task'}
-            </button>
+          {status === "STUCK" && (
+            <textarea
+              required
+              value={stuckReason}
+              onChange={(e) => setStuckReason(e.target.value)}
+              placeholder="Lý do bị kẹt"
+              className="w-full p-2.5 rounded-xl border border-rose-400 bg-transparent"
+            />
+          )}
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Mô tả / ghi chú"
+            className="w-full p-2.5 rounded-xl border bg-transparent"
+          />
+          {taskToEdit && (
+            <>
+              <div className="border-t pt-4 space-y-2">
+                <b>KẾT QUẢ / FILE BÀN GIAO</b>
+                {taskToEdit.deliverables?.map((d) => (
+                  <a
+                    key={d.id}
+                    href={d.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-cyan-600"
+                  >
+                    {d.title || d.url}
+                  </a>
+                ))}
+                <div className="grid md:grid-cols-3 gap-2">
+                  <input
+                    value={fileTitle}
+                    onChange={(e) => setFileTitle(e.target.value)}
+                    placeholder="Tên file"
+                    className="p-2 border rounded"
+                  />
+                  <input
+                    value={fileUrl}
+                    onChange={(e) => setFileUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="p-2 border rounded"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await addDeliverable(taskToEdit.id, fileTitle, fileUrl);
+                        setFileTitle("");
+                        setFileUrl("");
+                        setActivities(await taskApi.activities(taskToEdit.id));
+                      } catch (e) {
+                        setError(
+                          e instanceof Error
+                            ? e.message
+                            : "Không thể thêm link",
+                        );
+                      }
+                    }}
+                    className="bg-cyan-600 text-white rounded font-bold"
+                  >
+                    + Thêm link
+                  </button>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <b className="flex gap-2">
+                  <Clock3 size={16} />
+                  LỊCH SỬ HOẠT ĐỘNG
+                </b>
+                <div className="mt-3 space-y-3">
+                  {activities.map((a) => (
+                    <div
+                      key={a.id}
+                      className="border-l-2 border-amber-400 pl-3"
+                    >
+                      <div className="text-xs text-slate-500">
+                        {vnTime(a.createdAt)}
+                      </div>
+                      <div>
+                        <b>{a.actor.name}</b> ·{" "}
+                        {activityLabels[a.type] || a.type}
+                      </div>
+                      {a.type === "DEADLINE_CHANGED" && (
+                        <div className="text-xs">
+                          {new Date(String(a.metadata.from)).toLocaleDateString(
+                            "vi-VN",
+                          )}{" "}
+                          →{" "}
+                          {new Date(String(a.metadata.to)).toLocaleDateString(
+                            "vi-VN",
+                          )}
+                          <br />
+                          Lý do: {String(a.metadata.reason)}
+                        </div>
+                      )}
+                      {a.type === "TASK_ASSIGNED" && (
+                        <div className="text-xs">
+                          {String(a.metadata.userName || "")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!activities.length && (
+                    <p className="text-slate-500">Chưa có hoạt động.</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          <div className="flex justify-between border-t pt-4">
+            {taskToEdit && currentUser?.companyRole === "MANAGER" ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await deleteTask(taskToEdit.id);
+                  onClose();
+                }}
+                className="text-rose-600 font-bold"
+              >
+                Xóa task
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose}>
+                Hủy
+              </button>
+              <button
+                disabled={saving}
+                className="bg-amber-600 text-white px-5 py-2 rounded-xl font-bold disabled:opacity-50"
+              >
+                {saving ? "Đang lưu..." : "Lưu"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

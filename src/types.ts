@@ -1,54 +1,134 @@
-export type ShowScale = 'NHỎ - 1 SUẤT' | 'NHỎ - 2 SUẤT' | 'NHỎ - 3 SUẤT' | 'VỪA - 2 SUẤT' | 'LỚN - 2 SUẤT' | 'LỚN 1 SUẤT PLUS' | 'WORKSHOP' | 'TẾU CONCERT SIÊU LỚN';
+export type ShowScale =
+  | "NHỎ - 1 SUẤT"
+  | "NHỎ - 2 SUẤT"
+  | "NHỎ - 3 SUẤT"
+  | "VỪA - 2 SUẤT"
+  | "LỚN - 2 SUẤT"
+  | "LỚN 1 SUẤT PLUS"
+  | "WORKSHOP"
+  | "TẾU CONCERT SIÊU LỚN";
 
-export type ShowGoal = 'Doanh thu' | 'Doanh thu + Talent' | 'Doanh thu + Scale Up' | 'Doanh thu + Sponsor' | 'Doanh thu + Giáo dục' | 'Talent Test Joke' | 'Siêu doanh thu';
+export type ShowGoal =
+  | "Doanh thu"
+  | "Doanh thu + Talent"
+  | "Doanh thu + Scale Up"
+  | "Doanh thu + Sponsor"
+  | "Doanh thu + Giáo dục"
+  | "Talent Test Joke"
+  | "Siêu doanh thu";
 
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'STUCK' | 'DONE';
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "STUCK" | "DONE";
 
-export type TaskPriority = 'Khẩn cấp' | 'Quan trọng' | 'Bình thường';
+export type TaskPriority = "Khẩn cấp" | "Quan trọng" | "Bình thường";
 
-export type ApiTaskPriority = 'NORMAL' | 'IMPORTANT' | 'URGENT';
-export type CompanyRole = 'MANAGER' | 'MEMBER';
-export type ShowStatus = 'PLANNING' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
-export type ShowMemberRole = 'PM' | 'PA1' | 'PA2' | 'PA3' | 'SE' | 'SSE' | 'PE' | 'SAE' | 'PRODUCTION' | 'SOCIAL' | 'TALENT_ASSISTANT' | 'OTHER';
-export interface User { id:string; name:string; email:string; avatarUrl?:string|null; department?:string|null; companyRole:CompanyRole; active:boolean }
-export interface ShowMember { id:string; showId:string; userId:string; role:ShowMemberRole; note?:string|null; user:User }
-export interface TaskAssignee { taskId:string; userId:string; user:User }
-export interface TaskDeliverable { id:string; taskId:string; title?:string|null; url:string; submittedById:string; createdAt:string; submittedBy?:User }
-export interface TaskDependency { id:string; predecessorTaskId:string; successorTaskId:string; lagDays:number; autoAdjust:boolean }
+export type ApiTaskPriority = "NORMAL" | "IMPORTANT" | "URGENT";
+export type CompanyRole = "MANAGER" | "MEMBER";
+export type ShowStatus =
+  "PLANNING" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
+export type ShowMemberRole =
+  | "PM"
+  | "PA1"
+  | "PA2"
+  | "PA3"
+  | "SE"
+  | "SSE"
+  | "PE"
+  | "SAE"
+  | "PRODUCTION"
+  | "SOCIAL"
+  | "TALENT_ASSISTANT"
+  | "OTHER";
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  department?: string | null;
+  companyRole: CompanyRole;
+  active: boolean;
+}
+export interface ShowMember {
+  id: string;
+  showId: string;
+  userId: string;
+  role: ShowMemberRole;
+  note?: string | null;
+  user: User;
+}
+export interface TaskAssignee {
+  taskId: string;
+  userId: string;
+  user: User;
+}
+export interface TaskDeliverable {
+  id: string;
+  taskId: string;
+  title?: string | null;
+  url: string;
+  submittedById: string;
+  createdAt: string;
+  submittedBy?: User;
+}
+export interface TaskDependency {
+  id: string;
+  predecessorTaskId: string;
+  successorTaskId: string;
+  lagDays: number;
+  autoAdjust: boolean;
+}
+export type TaskActivityType =
+  | "TASK_CREATED"
+  | "TASK_ASSIGNED"
+  | "TASK_UNASSIGNED"
+  | "STATUS_CHANGED"
+  | "DEADLINE_CHANGED"
+  | "DELIVERABLE_ADDED"
+  | "DELIVERABLE_REMOVED"
+  | "STUCK_REPORTED"
+  | "STUCK_RESOLVED";
+export interface TaskActivity {
+  id: string;
+  taskId: string;
+  actorId: string;
+  type: TaskActivityType;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  actor: { id: string; name: string; avatarUrl?: string | null };
+}
 
-export type TaskCategory = 
-  | '1. VENUE'
-  | '2. LINEUP VÀ KỊCH BẢN CHỮ'
-  | '3. GIẤY PHÉP'
-  | '4. THÔNG TIN SHOW'
-  | '5. SPONSOR'
-  | '6. DỰ TRÙ KINH PHÍ'
-  | '7. TẠM ỨNG & GIẢI CHI'
-  | '8. HÓA ĐƠN & NGHIỆM THU'
-  | '9. LOGISTIC'
-  | '10. NHÂN SỰ'
-  | '11. REMARKETING VÀ SALE VÉ'
-  | 'TASK NGOÀI (AD-HOC)';
+export type TaskCategory =
+  | "1. VENUE"
+  | "2. LINEUP VÀ KỊCH BẢN CHỮ"
+  | "3. GIẤY PHÉP"
+  | "4. THÔNG TIN SHOW"
+  | "5. SPONSOR"
+  | "6. DỰ TRÙ KINH PHÍ"
+  | "7. TẠM ỨNG & GIẢI CHI"
+  | "8. HÓA ĐƠN & NGHIỆM THU"
+  | "9. LOGISTIC"
+  | "10. NHÂN SỰ"
+  | "11. REMARKETING VÀ SALE VÉ"
+  | "TASK NGOÀI (AD-HOC)";
 
-export type TaskPhase = 
-  | 'PHASE 1 (INITIATING)'
-  | 'PHASE 2 (PLANNING)'
-  | 'PHASE 3 (EXECUTING)'
-  | 'PHASE 4 (SUPERVISOR / ONSITE)'
-  | 'PHASE 5 (CLOSING)';
+export type TaskPhase =
+  | "PHASE 1 (INITIATING)"
+  | "PHASE 2 (PLANNING)"
+  | "PHASE 3 (EXECUTING)"
+  | "PHASE 4 (SUPERVISOR / ONSITE)"
+  | "PHASE 5 (CLOSING)";
 
-export type TaskDepartment = 
-  | 'SHOW (SE)'
-  | 'TRUYỀN THÔNG (PE)'
-  | 'SALE (SAE)'
-  | 'COMMUNITY & LOGISTIC (CE)'
-  | 'KHÁC';
+export type TaskDepartment =
+  | "SHOW (SE)"
+  | "TRUYỀN THÔNG (PE)"
+  | "SALE (SAE)"
+  | "COMMUNITY & LOGISTIC (CE)"
+  | "KHÁC";
 
 export interface ShowTask {
   id: string;
-  showId?: string; // empty if external/ad-hoc task
+  showId?: string; // undefined for external/ad-hoc task
   showName?: string;
-  show?: { id:string; name:string; members?: ShowMember[] };
+  show?: { id: string; name: string; members?: ShowMember[] };
   title: string;
   category: TaskCategory;
   phase?: TaskPhase;
@@ -72,6 +152,9 @@ export interface ShowTask {
   notes?: string;
   isExternalTask?: boolean; // Task ngoài
   completedAt?: string | null;
+  deadlineChangeReason?: string;
+  deadlineVarianceDays?: number;
+  completionVarianceDays?: number;
 }
 
 export interface ShowInfo {
@@ -81,11 +164,19 @@ export interface ShowInfo {
   date: string; // e.g. "T7 (19/12)"
   showDate?: string;
   time?: string;
-  locationCity: 'SÀI GÒN' | 'HÀ NỘI' | 'CẦN THƠ' | 'BIÊN HOÀ' | 'THỦ ĐỨC' | 'ĐỒNG NAI' | 'KHÁC' | string;
+  locationCity:
+    | "SÀI GÒN"
+    | "HÀ NỘI"
+    | "CẦN THƠ"
+    | "BIÊN HOÀ"
+    | "THỦ ĐỨC"
+    | "ĐỒNG NAI"
+    | "KHÁC"
+    | string;
   venue: string;
   scale: ShowScale;
   goal?: ShowGoal;
-  status?: 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status?: "UPCOMING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   apiStatus?: ShowStatus;
   code?: string | null;
   description?: string | null;
@@ -152,12 +243,25 @@ export interface ShowAttendanceRecord {
   showName: string;
   date: string;
   staffName: string;
-  role: 'PM' | 'PA' | 'SE' | 'SSE' | 'PE' | 'SAE' | 'CE' | 'TECHNICAL' | 'STAGE_MANAGER' | 'LEAD_CHECKIN' | 'CTV_LOGISTIC' | 'HTV_USHER' | 'TALENT_CARE';
+  role:
+    | "PM"
+    | "PA"
+    | "SE"
+    | "SSE"
+    | "PE"
+    | "SAE"
+    | "CE"
+    | "TECHNICAL"
+    | "STAGE_MANAGER"
+    | "LEAD_CHECKIN"
+    | "CTV_LOGISTIC"
+    | "HTV_USHER"
+    | "TALENT_CARE";
   roleLabel: string;
   shift: string; // e.g. "Suất 1", "Suất 2", "Cả 2 suất + Rehearsal"
   checkInTime?: string;
   checkOutTime?: string;
-  status: 'SCHEDULED' | 'PRESENT' | 'LATE' | 'ABSENT' | 'COMPLETED';
+  status: "SCHEDULED" | "PRESENT" | "LATE" | "ABSENT" | "COMPLETED";
   baseAllowance: number; // Mức thù lao / phụ cấp theo vai trò trong show
   bonusOrPenalty: number;
   evalNotes?: string;
@@ -195,13 +299,19 @@ export interface AdvanceSettlementItem {
   showId: string;
   showName: string;
   month: string;
-  phase: 'TRƯỚC SHOW' | 'SAU SHOW';
-  category: 'Giấy phép & Venue' | 'Vé máy bay & Chỗ ở' | 'Thiết bị Pro & Sound Light' | 'Sinh hoạt phí' | 'Vật dụng OP & Logistic' | 'Di chuyển & Phát sinh';
+  phase: "TRƯỚC SHOW" | "SAU SHOW";
+  category:
+    | "Giấy phép & Venue"
+    | "Vé máy bay & Chỗ ở"
+    | "Thiết bị Pro & Sound Light"
+    | "Sinh hoạt phí"
+    | "Vật dụng OP & Logistic"
+    | "Di chuyển & Phát sinh";
   requestedAmount: number;
   actualAmount: number;
   differenceAmount: number;
   picName: string;
-  invoiceStatus: 'CHƯA CÓ BILL' | 'ĐÃ CÓ BILL GIẤY/CK' | 'ĐÃ TẢI LÊN DRIVE';
+  invoiceStatus: "CHƯA CÓ BILL" | "ĐÃ CÓ BILL GIẤY/CK" | "ĐÃ TẢI LÊN DRIVE";
   billProofDescription: string;
   driveFolderLink?: string;
   doubleCheckRound1: boolean; // Cập nhật số tiền chi & bill chi
