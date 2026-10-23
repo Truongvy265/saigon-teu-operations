@@ -11,9 +11,17 @@ import { showMembersRouter } from "./routes/showMembers";
 import { tasksRouter } from "./routes/tasks";
 import { deliverablesRouter } from "./routes/deliverables";
 import { meRouter } from "./routes/me";
-import { assertConfiguredOrigin, corsOrigins, isProduction } from "./config";
+import {
+  assertConfiguredOrigin,
+  authMode,
+  corsOrigins,
+  isProduction,
+} from "./config";
 import { prisma } from "./db";
 import { logger } from "./utils/logger";
+import { initializeFirebaseAuth } from "./services/firebaseAdmin";
+
+if (authMode === "firebase") initializeFirebaseAuth();
 
 const app = express();
 app.disable("x-powered-by");
@@ -71,7 +79,7 @@ app.use("/api/deliverables", deliverablesRouter);
 app.use("/api/me", meRouter);
 app.use(errorHandler);
 
-const port = Number(process.env.API_PORT || 4000),
+const port = Number(process.env.API_PORT || process.env.PORT || 4000),
   host = process.env.API_HOST || (isProduction ? "127.0.0.1" : "0.0.0.0");
 const server = app.listen(port, host, () =>
   logger.info("api_started", {

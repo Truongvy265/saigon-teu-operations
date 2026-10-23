@@ -44,7 +44,7 @@ npm.cmd run prisma:validate
 
 ## Production
 
-Xem [Production deployment runbook](docs/PRODUCTION_DEPLOYMENT.md) và các mẫu trong `deploy/`. Không commit `.env`, service-account JSON, database URL hoặc tunnel credential.
+Xem [Production deployment runbook](docs/PRODUCTION_DEPLOYMENT.md), [Render backend deployment](docs/RENDER_DEPLOYMENT.md) và các mẫu trong `deploy/`. Không commit `.env`, service-account JSON, database URL hoặc tunnel credential.
 
 ## Giới hạn đã biết
 

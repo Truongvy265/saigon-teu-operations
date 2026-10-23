@@ -10,6 +10,8 @@ Kiến trúc mục tiêu:
 
 Không lưu credential trong Git. Những giá trị `example.com`, UUID và URL trong tài liệu đều là placeholder.
 
+Nếu triển khai backend bằng Render thay cho Oracle VM, xem [Render deployment](RENDER_DEPLOYMENT.md).
+
 ## 1. Compatibility và sizing
 
 Production chuẩn hóa trên Node.js 20 LTS, Ubuntu ARM64 và Prisma 6. Prisma hỗ trợ Linux ARM64/glibc; chạy `npm ci` và `npm run prisma:generate` ngay trên VM để tạo engine native đúng nền tảng. Không copy `node_modules` hoặc Prisma engine từ Windows/x64 lên VM.

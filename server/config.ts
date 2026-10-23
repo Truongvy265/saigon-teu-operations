@@ -21,6 +21,16 @@ if (isProduction && !process.env.FIREBASE_PROJECT_ID) {
   throw new Error("Production requires FIREBASE_PROJECT_ID");
 }
 
+if (
+  isProduction &&
+  !process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 &&
+  !process.env.GOOGLE_APPLICATION_CREDENTIALS
+) {
+  throw new Error(
+    "Production requires FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 or GOOGLE_APPLICATION_CREDENTIALS",
+  );
+}
+
 export const assertConfiguredOrigin = (origin?: string) => {
   if (!origin) return true; // CLI, health monitors and same-origin requests.
   if (corsOrigins.includes(origin.replace(/\/$/, ""))) return true;

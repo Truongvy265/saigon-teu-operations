@@ -1,10 +1,9 @@
 import type { NextFunction, Response } from "express";
-import { applicationDefault, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { prisma } from "../db";
 import type { AuthRequest } from "../types";
 import { authMode, isProduction } from "../config";
 import { forbidden, unauthorized } from "../utils/errors";
+import { initializeFirebaseAuth } from "../services/firebaseAdmin";
 
 export const extractBearerToken = (header?: string) => {
   const match = header?.match(/^Bearer\s+(\S+)$/i);
@@ -12,15 +11,6 @@ export const extractBearerToken = (header?: string) => {
 };
 export const developmentIdentityAllowed = (mode: string, production: boolean) =>
   mode === "development" && !production;
-
-const firebaseAuth = () => {
-  if (!getApps().length)
-    initializeApp({
-      credential: applicationDefault(),
-      projectId: process.env.FIREBASE_PROJECT_ID,
-    });
-  return getAuth();
-};
 
 async function loadActiveUser(id?: string, email?: string) {
   const user = await prisma.user.findFirst({
@@ -53,7 +43,7 @@ export async function authenticate(
     }
     const token = extractBearerToken(req.header("authorization"));
     if (!token) throw unauthorized("Firebase ID token is required");
-    const decoded = await firebaseAuth().verifyIdToken(token, true);
+    const decoded = await initializeFirebaseAuth().verifyIdToken(token, true);
     if (!decoded.email || decoded.email_verified !== true)
       throw unauthorized("A verified Google email is required");
     req.user = await loadActiveUser(undefined, decoded.email);

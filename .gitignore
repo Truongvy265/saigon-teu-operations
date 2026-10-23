@@ -5,5 +5,8 @@ dist-server/
 coverage/
 .DS_Store
 *.log
+*firebase*service*account*.json
+*service-account*.json
+firebase-adminsdk*.json
 .env*
 !.env.example
